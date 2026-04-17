@@ -6,7 +6,7 @@ spring:
     url: jdbc:mysql://localhost:3306/auth_app
     username: root
     password: pass123
-
+#mysql://root:LQUImPLzFYWUcROVSvlECAUozKsFFHZh@nozomi.proxy.rlwy.net:18956/railway
   jpa:
     hibernate:
       ddl-auto: update
