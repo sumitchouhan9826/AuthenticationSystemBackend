@@ -50,8 +50,8 @@ public class AuthController {
 
     @PostMapping
     public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
-        System.out.println("login hit");
-        Authentication authenticate =  authenticate(loginRequest);
+        System.out.println("login hit for email: " + loginRequest.email());
+        authenticate(loginRequest);
         User user = userRepository.findByEmail(loginRequest.email()).orElseThrow(() -> new BadCredentialsException("User not found"));
 
         if(!user.isEnabled()) {
@@ -75,24 +75,26 @@ public class AuthController {
         cookieService.attachRefreshCookie(response, refreshToken, (int)jwtService.getRefreshTtlSeconds());
         cookieService.addNoStoreHeaders(response);
 
-       TokenResponse tokenResponse =  TokenResponse.of(accessToken, "", jwtService.getAccessTtlSeconds(), modelMapper.map(user, UserDto.class));
+       TokenResponse tokenResponse =  TokenResponse.of(accessToken, refreshToken, jwtService.getAccessTtlSeconds(), modelMapper.map(user, UserDto.class));
             return ResponseEntity.ok(tokenResponse);
 
 }
 
-    private Authentication authenticate(LoginRequest loginRequest) {
-        try{
-        return authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.email(),
-                        loginRequest.password()
-                )
-        );
-    } catch (Exception e) {
-            throw new RuntimeException("Invalid credentials");
+    private void authenticate(LoginRequest loginRequest) {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.email(),
+                            loginRequest.password()
+                    )
+            );
+        } catch (BadCredentialsException e) {
+            throw new BadCredentialsException("Invalid email or password");
+        } catch (DisabledException e) {
+            throw new DisabledException("User account is disabled");
+        } catch (Exception e) {
+            throw new RuntimeException("Authentication failed: " + e.getMessage());
         }
-
-
     }
 
     @PostMapping("/refresh")

@@ -1,10 +1,13 @@
 package com.myAuth.authenticationSystem.Security;
 
 
+import com.myAuth.authenticationSystem.config.AppConstants;
 import com.myAuth.authenticationSystem.entities.Provider;
 import com.myAuth.authenticationSystem.entities.RefreshToken;
+import com.myAuth.authenticationSystem.entities.Role;
 import com.myAuth.authenticationSystem.entities.User;
 import com.myAuth.authenticationSystem.repositories.RefreshTokenRepository;
+import com.myAuth.authenticationSystem.repositories.RoleRepository;
 import com.myAuth.authenticationSystem.repositories.UserRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,7 +18,6 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.security.autoconfigure.SecurityProperties;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final JwtService jwtService;
     private final CookieService cookieService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RoleRepository roleRepository;
 
     @Value("${app.auth.frontend.success-redirect}")
     private String frontEndSuccessUrl ;
@@ -56,6 +60,9 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         logger.info("User attributes: " + oAuth2User.getAttributes().toString());
 
         User user;
+        Role guestRole = roleRepository.findByName(AppConstants.GUEST_ROLE)
+                .orElseThrow(() -> new RuntimeException("Default role not found"));
+
         switch (registrationId) {
             case "google" -> {
                 String googleId = oAuth2User.getAttributes().getOrDefault("sub", "").toString();
@@ -63,16 +70,18 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 String name = oAuth2User.getAttributes().getOrDefault("name", "").toString();
                 String image = oAuth2User.getAttributes().getOrDefault("picture", "").toString();
 
-                User newUser = User.builder()
-                        .email(email)
-                        .name(name)
-                        .image(image)
-                        .provider(Provider.GOOGLE)
-                        .providerId(googleId)
-                        .enabled(true)
-                        .build();
-
-                user = userRepository.findByEmail(email).orElseGet(() -> userRepository.save(newUser));
+                user = userRepository.findByEmail(email).orElseGet(() -> {
+                    User newUser = User.builder()
+                            .email(email)
+                            .name(name)
+                            .image(image)
+                            .provider(Provider.GOOGLE)
+                            .providerId(googleId)
+                            .enabled(true)
+                            .roles(Set.of(guestRole))
+                            .build();
+                    return userRepository.save(newUser);
+                });
             }
             case "github" -> {
                 String githubId = oAuth2User.getAttributes().getOrDefault("id", "").toString();
@@ -83,16 +92,19 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                 if (email == null){
                     email = name + "@github.com";
                 }
-                User newUser = User.builder()
-                        .email(email)
-                        .name(name)
-                        .image(image)
-                        .provider(Provider.GITHUB)
-                        .providerId(githubId)
-                        .enabled(true)
-                        .build();
-
-                user = userRepository.findByEmail(email).orElseGet(() -> userRepository.save(newUser));
+                final String finalEmail = email;
+                user = userRepository.findByEmail(email).orElseGet(() -> {
+                    User newUser = User.builder()
+                            .email(finalEmail)
+                            .name(name)
+                            .image(image)
+                            .provider(Provider.GITHUB)
+                            .providerId(githubId)
+                            .enabled(true)
+                            .roles(Set.of(guestRole))
+                            .build();
+                    return userRepository.save(newUser);
+                });
             }
 
                 default -> {

@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -66,12 +67,13 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-
+        if (roles == null) {
+            return Collections.emptyList();
+        }
         return roles
                 .stream()
                 .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .toList();
-
     }
 
     @Override

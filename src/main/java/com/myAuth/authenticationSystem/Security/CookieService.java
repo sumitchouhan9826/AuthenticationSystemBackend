@@ -25,11 +25,11 @@ public class CookieService {
             @Value("${security.jwt.cookie-same-site}") String cookieSameSite,
             @Value("${security.jwt.cookie-domain}") String cookieDomain) {
 
-        this.refreshTokenCookieName = "refreshToken";
-        this.cookieHttpOnly = true;
-        this.cookieSecure = true;
-        this.cookieSameSite = "Strict";
-        this.cookieDomain = "localhost";
+        this.refreshTokenCookieName = refreshTokenCookieName;
+        this.cookieHttpOnly = cookieHttpOnly;
+        this.cookieSecure = cookieSecure;
+        this.cookieSameSite = cookieSameSite;
+        this.cookieDomain = cookieDomain;
 
 
     }

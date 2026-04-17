@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -39,9 +40,12 @@ public class UserServiceImpl implements UserService {
         }
         User user = modelMapper.map(userDto , User.class);
         user.setProvider(userDto.getProvider() !=null ? userDto.getProvider() : Provider.LOCAL);
+        user.setEnabled(true);
 
-        Role role = roleRepository.findByName("ROLE_"+ AppConstants.GUEST_ROLE).orElse(null);
-//        boolean add = UserDto.getRoles().add(role);
+        Role role = roleRepository.findByName(AppConstants.GUEST_ROLE)
+                .orElseThrow(() -> new ResourceNotFoundException("Default role not found"));
+        
+        user.setRoles(Set.of(role));
 
         User savedUser = userRepository.save(user);
         return modelMapper.map(savedUser , UserDto.class);
